@@ -36,10 +36,23 @@ class CodeQuery:
         try:
             CscopeOut = tuple(self.RootPath.glob("cscope.out"))[0]
         except IndexError:
-            pass
+            self._createFileList()
         else:
             if CscopeOut.is_file():
                 self._args.append("-d")
+            else:
+                self._createFileList()
+
+    def _createFileList(self):
+        with open(self.RootPath.joinpath("cscope.files"), "w+") as files:
+            self._addToList(files, "*.h")
+            self._addToList(files, "*.c")
+            self._addToList(files, "*.cpp")
+
+    def _addToList(self, File, pattern):
+        lst = self.RootPath.rglob(pattern)
+        for f in lst:
+            File.write(str(f.resolve())+"\n")
 
     def _query(self, num, string):
         query = "-L{num}{string}".format(num=num, string=string)
