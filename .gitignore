@@ -105,3 +105,11 @@ venv.bak/
 
 # vim swap files
 .*.sw*
+
+# gv and png files (output).
+.*.gv
+.*.png
+
+# cscope files.
+cscope.out
+cscope.files
