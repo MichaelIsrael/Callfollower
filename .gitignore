@@ -107,8 +107,8 @@ venv.bak/
 .*.sw*
 
 # gv and png files (output).
-.*.gv
-.*.png
+*.gv
+*.png
 
 # cscope files.
 cscope.out
