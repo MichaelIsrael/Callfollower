@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from CallChain import CallChain
-from CodeQuery import CodeQuery
+from CodeQuery import CscopeCodeQuery
 import argparse
 import logging
 import sys
@@ -27,16 +27,16 @@ ARGPARSE_VERSION_TXT = '%(prog)s {}'.format(VERSION_TXT)
 #######################################
 class CallFollower:
     def __init__(self, root_dir=r"."):
-        self._cquery = CodeQuery(root_dir)
+        self._cquery = CscopeCodeQuery(root_dir)
         self.log = logging.getLogger("CallFollower")
-        out_hdlr = logging.StreamHandler(sys.stdout)
-        out_hdlr.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
-        # out_hdlr.setLevel(logging.INFO)
-        self.log.addHandler(out_hdlr)
-        self.log.setLevel(logging.DEBUG)
+        StdOutHandler = logging.StreamHandler(sys.stdout)
+        StdOutHandler.setFormatter(logging.Formatter('%(message)s'))
+        StdOutHandler.setLevel(logging.DEBUG)
+        self.log.addHandler(StdOutHandler)
+        # self.log.setLevel(logging.DEBUG)
 
-    def _createCallerChain(self, chain, function, counter):
-        self.log.debug("_createCallerChain: %s %s", chain, function)
+    def _createCallerChain(self, link, function, counter):
+        self.log.debug("_createCallerChain: %s %s", link, function)
         if counter is not None:
             if counter != 0:
                 counter -= 1
@@ -46,7 +46,7 @@ class CallFollower:
         callers = self._cquery.getCaller(function)
 
         for caller in callers:
-            parent = chain.createParent(caller)
+            parent = link.addParent(caller)
             self._createCallerChain(parent, caller.getName(), counter)
 
     def getCaller(self, function, limit=0):
@@ -55,23 +55,24 @@ class CallFollower:
         else:
             counter = limit
 
-        chain = CallChain(function)
-        self._createCallerChain(chain, function, counter)
+        rootFunction = self._cquery.getDefinition(function)[0]
+        chain = CallChain(function, rootFunction)
+        rootLink = chain.getRoot()
+        self._createCallerChain(rootLink, function, counter)
         return chain
 
-    def _createCallingChain(self, chain, function, counter):
-        self.log.debug("_createCallingChain: %s %s", chain, function)
+    def _createCallingChain(self, link, function, counter):
+        self.log.debug("_createCallingChain: %s %s", link, function)
         if counter is not None:
             if counter != 0:
                 counter -= 1
             else:
                 return
-            # raise NotImplementedError
 
         called = self._cquery.getCalled(function)
 
         for call in called:
-            child = chain.createChild(call)
+            child = link.addChild(call)
             self._createCallingChain(child, call.getName(), counter)
 
     def getCalled(self, function, limit=0):
@@ -80,8 +81,10 @@ class CallFollower:
         else:
             counter = limit
 
-        chain = CallChain(function)
-        self._createCallingChain(chain, function, counter)
+        rootFunction = self._cquery.getDefinition(function)[0]
+        chain = CallChain(function, rootFunction)
+        rootLink = chain.getRoot()
+        self._createCallingChain(rootLink, function, counter)
         return chain
 
     def getFullTree(self, function, limit=0):
@@ -90,9 +93,11 @@ class CallFollower:
         else:
             counter = limit
 
-        chain = CallChain(function)
-        self._createCallerChain(chain, function, counter)
-        self._createCallingChain(chain, function, counter)
+        rootFunction = self._cquery.getDefinition(function)[0]
+        chain = CallChain(function, rootFunction)
+        rootLink = chain.getRoot()
+        self._createCallerChain(rootLink, function, counter)
+        self._createCallingChain(rootLink, function, counter)
         return chain
 
 
@@ -266,7 +271,6 @@ class CallFollowerRunner:
     def run(self):
         # Parse arguments
         args = self.parser.parse_args()
-        print(args)
 
         # Create instance of CallFollower only if needed.
         if args.subcmd != self.help:

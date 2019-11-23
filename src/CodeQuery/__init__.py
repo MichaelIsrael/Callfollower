@@ -1,4 +1,4 @@
-from CodeQuery.CodeQuery import CodeQuery
+from CodeQuery.CscopeCodeQuery import CscopeCodeQuery
 
 
-__all__ = ["CodeQuery"]
+__all__ = ["CscopeCodeQuery"]

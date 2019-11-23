@@ -1,62 +1,88 @@
 from CallGraphGenerator import CallGraphGenerator  # , NodeRole
 
 
-class CallChain:
-    def __init__(self, info):
+class ChainLink:
+    def __init__(self, chain, info):
+        self._chain = chain
+        self._info = info
+        self._parents = []
+        self._children = []
+
+    def __hash__(self):
+        return hash(self._info)
+
+    def addParent(self, link):
+        parent = self._chain.getLink(link)
+        if parent not in self._parents:
+            self._parents.append(parent)
+        return parent
+
+    def addChild(self, link):
+        child = self._chain.getLink(link)
+        if child not in self._children:
+            self._children.append(child)
+        return child
+
+    def getParents(self):
+        return iter(self._parents)
+
+    def getChildren(self):
+        return iter(self._children)
+
+
+class LinksList:
+    def __init__(self, chain):
+        self._links = {}
+        self._chain = chain
+
+    def __len__(self):
+        return len(self._links)
+
+    def __iter__(self):
+        return iter(self._links.values())
+
+    def __getitem__(self, key):
+        return self._links[hash(key)]
+
+    def create(self, link):
         try:
-            self._name = info.name
-        except AttributeError:
-            self._name = info
-            self._info = None
-        else:
-            self._info = info
-        self.Parents = []
-        self.Children = []
+            return self[link]
+        except KeyError:
+            newLink = ChainLink(self._chain, link)
+            self._links[hash(link)] = newLink
+            return newLink
 
-    def getName(self):
-        return self._name
 
-    def __eq__(self, other):
-        return self._info == other._info
+class CallChain:
+    def __init__(self, name, root):
+        self._name = name
+        self._root = root
+        self._list = LinksList(self)
 
-    def createParent(self, link):
-        # TODO: Check if parent already exists
-        newParent = CallChain(link)
-        if newParent not in self.Parents:
-            self.Parents.append(newParent)
-        return newParent
+    def getRoot(self):
+        return self.getLink(self._root)
 
-    def createChild(self, link):
-        # TODO: Check if child already exists
-        newChild = CallChain(link)
-        if newChild not in self.Children:
-            self.Children.append(newChild)
-        return newChild
-
-    def _writeNode(self, graph):
-        MeNode = graph.addNode(self.getName())
-
-        ChildrenNodes = []
-        for child in self.Children:
-            childNode = child._writeNode(graph)
-            ChildrenNodes.append(childNode)
-            MeNode.linkChildren(childNode)
-
-        ParentNodes = []
-        for parent in self.Parents:
-            parentNode = parent._writeNode(graph)
-            ParentNodes.append(parentNode)
-            MeNode.linkParents(parentNode)
-
-        return MeNode
+    def getLink(self, link):
+        newLink = self._list.create(link)
+        return newLink
 
     def generateGraph(self):
-        with CallGraphGenerator(self.getName()) as graph:
-            self._writeNode(graph)
+        with CallGraphGenerator(self._name) as graph:
+            for link in self._list:
+                # print("Defining :"+link._info.getName())
+                graph.define(link._info)
 
-    def __repr__(self):  # TODO: Working-around! Remove!
+            for link in self._list:
+                for child in link.getChildren():
+                    # print("Linking :" + link._info.getName() + " to " + child._info.getName())
+                    graph.link(link._info, child._info)
+                for parent in link.getParents():
+                    # print("Linking :" + parent._info.getName() + " to " + link._info.getName())
+                    graph.link(parent._info, link._info)
+
+    def __repr__(self):
         return str(self)
 
     def __str__(self):
-        # TODO:
-        return str(self.Parents)+"\n"+str(self.getName())+"\n"+str(self.Children)
+        return "Object CallChain {} [{} links]".format(self._name,
+                                                       len(self._list))
