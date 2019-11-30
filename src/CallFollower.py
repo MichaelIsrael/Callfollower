@@ -27,29 +27,28 @@ ARGPARSE_VERSION_TXT = '%(prog)s {}'.format(VERSION_TXT)
 #######################################
 class CallFollower:
     def __init__(self, root_dir=r"."):
+        self.log = logging.getLogger("CallFollower.CallFollower")
+        self.log.debug("Creating CscopeCodeQuery instance.")
         self._cquery = CscopeCodeQuery(root_dir)
-        self.log = logging.getLogger("CallFollower")
-        StdOutHandler = logging.StreamHandler(sys.stdout)
-        StdOutHandler.setFormatter(logging.Formatter('%(message)s'))
-        StdOutHandler.setLevel(logging.DEBUG)
-        self.log.addHandler(StdOutHandler)
-        # self.log.setLevel(logging.DEBUG)
 
-    def _createCallerChain(self, link, function, counter):
-        self.log.debug("_createCallerChain: %s %s", link, function)
+    def _createCallerChain(self, link, counter):
+        self.log.debug("_createCallerChain: %s. Counter = %d.", link, counter)
+
         if counter is not None:
             if counter != 0:
                 counter -= 1
             else:
                 return
 
-        callers = self._cquery.getCaller(function)
+        callers = self._cquery.getCaller(link.getName())
 
         for caller in callers:
             parent = link.addParent(caller)
-            self._createCallerChain(parent, caller.getName(), counter)
+            self._createCallerChain(parent, counter)
 
     def getCaller(self, function, limit=0):
+        self.log.info("Getting callers of '%s' (limit = %d).", function, limit)
+
         if limit == 0:
             counter = None
         else:
@@ -58,24 +57,28 @@ class CallFollower:
         rootFunction = self._cquery.getDefinition(function)[0]
         chain = CallChain(function, rootFunction)
         rootLink = chain.getRoot()
-        self._createCallerChain(rootLink, function, counter)
+        self._createCallerChain(rootLink, counter)
         return chain
 
-    def _createCallingChain(self, link, function, counter):
-        self.log.debug("_createCallingChain: %s %s", link, function)
+    def _createCallingChain(self, link, counter):
+        self.log.debug("_createCallingChain: %s. Counter = %d.", link, counter)
+
         if counter is not None:
             if counter != 0:
                 counter -= 1
             else:
                 return
 
-        called = self._cquery.getCalled(function)
+        called = self._cquery.getCalled(link.getName())
 
         for call in called:
             child = link.addChild(call)
-            self._createCallingChain(child, call.getName(), counter)
+            self._createCallingChain(child, counter)
 
     def getCalled(self, function, limit=0):
+        self.log.info("Getting function called by '%s' (limit = %d).",
+                      function, limit)
+
         if limit == 0:
             counter = None
         else:
@@ -84,10 +87,13 @@ class CallFollower:
         rootFunction = self._cquery.getDefinition(function)[0]
         chain = CallChain(function, rootFunction)
         rootLink = chain.getRoot()
-        self._createCallingChain(rootLink, function, counter)
+        self._createCallingChain(rootLink, counter)
         return chain
 
     def getFullTree(self, function, limit=0):
+        self.log.info("Getting full call tree of '%s' (limit = %d).",
+                      function, limit)
+
         if limit == 0:
             counter = None
         else:
@@ -96,8 +102,8 @@ class CallFollower:
         rootFunction = self._cquery.getDefinition(function)[0]
         chain = CallChain(function, rootFunction)
         rootLink = chain.getRoot()
-        self._createCallerChain(rootLink, function, counter)
-        self._createCallingChain(rootLink, function, counter)
+        self._createCallerChain(rootLink, counter)
+        self._createCallingChain(rootLink, counter)
         return chain
 
 
@@ -106,6 +112,13 @@ class CallFollower:
 #######################################
 class CallFollowerRunner:
     def __init__(self):
+        # Create logger.
+        self.rootlog = logging.getLogger("CallFollower")
+        StdOutHandler = logging.StreamHandler(sys.stdout)
+        StdOutHandler.setFormatter(logging.Formatter('%(name)s: %(message)s'))
+        self.rootlog.addHandler(StdOutHandler)
+        self.log = logging.getLogger("CallFollower.CallFollowerRunner")
+
         #######################################################################
         # Start of argparse configuration.                                    #
         #######################################################################
@@ -124,6 +137,7 @@ class CallFollowerRunner:
                                  "--verbose",
                                  help="Activate debug mode (show full \
                                        exceptions).",
+                                 default=0,
                                  action="count")
 
         # -d, --dir
@@ -272,9 +286,20 @@ class CallFollowerRunner:
         # Parse arguments
         args = self.parser.parse_args()
 
+        # Parse verbosity
+        if args.verbose >= 2:
+            self.rootlog.setLevel(logging.DEBUG)
+            self.log.debug("Verbosity = %d. Setting log level to DEBUG",
+                           args.verbose)
+        elif args.verbose == 1:
+            self.rootlog.setLevel(logging.INFO)
+            self.log.debug("Verbosity = %d. Setting log level to INFO",
+                           args.verbose)
+
+        self.log.debug("Started with args %s.", str(args))
+
         # Create instance of CallFollower only if needed.
         if args.subcmd != self.help:
-            # TODO: Verbose
             self.follower = CallFollower(args.dir)
 
         # Running subcommand.
