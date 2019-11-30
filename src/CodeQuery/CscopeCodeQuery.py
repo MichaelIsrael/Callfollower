@@ -39,7 +39,6 @@ class CscopeResult:
         self.log = logging.getLogger("CallFollower.CscopeResult")
         self.log.debug("Parsing entry '%s'.", entry)
         regex = BuildRegex()
-        print(regex)
         match = re.match(regex, entry)
         if match:
             self.log.debug("Parsing returned '%s'.", str(match.groupdict()))
