@@ -1,8 +1,8 @@
 from CodeQuery.AbstractCodeQuery import AbstractCodeQuery, CodeDefinition
 from CodeQuery.AbstractCodeQuery import CodeQueryException
 from pathlib import Path
+import subprocess
 import logging
-import os
 import re
 
 
@@ -32,6 +32,15 @@ class BadCscopeOut(CodeQueryException):
 
     def __str__(self):
         return "'%s' is not valid." % self.file.resolve()
+
+
+class CscopeError(CodeQueryException):
+    def __init__(self, cmd, ret):
+        self.cmd = cmd
+        self.ret = ret
+
+    def __str__(self):
+        return "Command '%s' returned %d." % (self.cmd, self.ret)
 
 
 class CscopeResult:
@@ -113,9 +122,18 @@ class CscopeCodeQuery(AbstractCodeQuery):
 
     def _query(self, num, string):
         query = "-L{num}{string}".format(num=num, string=string)
-        cscopeCmd = " ".join(["cscope", *self._args, query])
+        cscopeCmd = ["cscope", *self._args, query]
         self.log.debug("Running query: '%s'.", cscopeCmd)
-        return os.popen(cscopeCmd).read().splitlines()
+        proc = subprocess.run(cscopeCmd,
+                              cwd=self.RootPath,
+                              encoding="UTF-8",
+                              stdout=subprocess.PIPE)
+        self.log.debug("Query returned: '%s'.", proc)
+
+        if proc.returncode != 0:
+            raise CscopeError(proc.args, proc.returncode)
+
+        return proc.stdout.splitlines()
 
     def getCaller(self, function):
         output = self._query(3, function)
