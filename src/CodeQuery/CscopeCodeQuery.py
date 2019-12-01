@@ -134,26 +134,26 @@ class CscopeCodeQuery(AbstractCodeQuery):
 
     def getCaller(self, function):
         output = self._query(3, function)
-        callers = [definition
+        callers = [(definition, CscopeResult(line).getLine())
                    for line in output
                    for definition in
                    self.getDefinition(CscopeResult(line).getFunction())]
         self.log.info("Found %d caller(s) of %s: %s.",
                       len(callers),
                       function,
-                      str([c.getName() for c in callers]))
+                      str([(c[0].getName(), c[1]) for c in callers]))
         return callers
 
     def getCalled(self, function):
         output = self._query(2, function)
-        called = [definition
+        called = [(definition, CscopeResult(line).getLine())
                   for line in output
                   for definition in
                   self.getDefinition(CscopeResult(line).getFunction())]
         self.log.info("Found %d function(s) called by %s: %s.",
                       len(called),
                       function,
-                      str([c.getName() for c in called]))
+                      str([(c[0].getName(), c[1]) for c in called]))
         return called
 
     def getDefinition(self, function):

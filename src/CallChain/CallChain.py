@@ -14,24 +14,26 @@ class ChainLink:
     def __hash__(self):
         return hash(self._info)
 
-    def addParent(self, link):
+    def addParent(self, link, line):
         """ Link a parent. """
         self.log.debug("Adding a parent: '%s'.", link.getName())
         # Get the parent node and create one if not existing.
         parent = self._chain.getLink(link)
-        if parent not in self._parents and self not in parent._children:
+        if (parent, line) not in self._parents and \
+           (self, line) not in parent._children:
             self.log.debug("New parent appended.")
-            self._parents.append(parent)
+            self._parents.append((parent, line))
         return parent
 
-    def addChild(self, link):
+    def addChild(self, link, line):
         """ Link a child. """
         self.log.debug("Adding a child: '%s'.", link.getName())
         # Get the child node and create one if not existing.
         child = self._chain.getLink(link)
-        if child not in self._children and self not in child._parents:
+        if (child, line) not in self._children and \
+           (self, line) not in child._parents:
             self.log.debug("New child appended.")
-            self._children.append(child)
+            self._children.append((child, line))
         return child
 
     def getParents(self):
@@ -114,19 +116,19 @@ class CallChain:
             for link in self._list:
                 self.log.debug("Links of %s (Children='%s'; Parents='%s').",
                                link.getName(),
-                               [c.getName() for c in link.getChildren()],
-                               [p.getName() for p in link.getParents()],
+                               [c[0].getName() for c in link.getChildren()],
+                               [p[0].getName() for p in link.getParents()],
                                )
-                for child in link.getChildren():
+                for child, line in link.getChildren():
                     self.log.debug("Linking child: %s to %s.",
                                    link._info.getName(),
                                    child._info.getName())
-                    graph.link(link._info, child._info)
-                for parent in link.getParents():
+                    graph.link(link._info, child._info, line)
+                for parent, line in link.getParents():
                     self.log.debug("Linking parent: %s to %s.",
                                    parent._info.getName(),
                                    link._info.getName())
-                    graph.link(parent._info, link._info)
+                    graph.link(parent._info, link._info, line)
 
     def __repr__(self):
         return str(self)

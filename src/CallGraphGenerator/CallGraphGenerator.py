@@ -70,12 +70,14 @@ class CallGraphGenerator:
 
         self.AG.add_node("Node" + str(node.getUniqueId()), **params)
 
-    def link(self, n1, n2):
+    def link(self, n1, n2, line):
         self.log.debug("Adding link '%s' (%d) to '%s' (%d).",
                        n1.getName(), n1.getUniqueId(),
                        n2.getName(), n2.getUniqueId())
         self.AG.add_edge("Node" + str(n1.getUniqueId()),
-                         "Node" + str(n2.getUniqueId()))
+                         "Node" + str(n2.getUniqueId()),
+                         label=line,
+                         )
 
     def __exit__(self, *exc_info):
         self.close()

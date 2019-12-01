@@ -10,6 +10,6 @@
 * [ ] Implement a different CodeQuery.
 * [ ] Grouping files in graph.
 * [ ] Grouping functions of the same name in graph.
-* [ ] Label link with line number.
+* [x] Label link with line number.
 * [ ] Handle missing definitions and still display them in the graph.
 * [ ] Optionally add more include folders to the CodeQuery.

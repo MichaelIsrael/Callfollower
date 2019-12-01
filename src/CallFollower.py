@@ -42,8 +42,8 @@ class CallFollower:
 
         callers = self._cquery.getCaller(link.getName())
 
-        for caller in callers:
-            parent = link.addParent(caller)
+        for caller, line in callers:
+            parent = link.addParent(caller, line)
             self._createCallerChain(parent, counter)
 
     def getCaller(self, function, limit=0):
@@ -73,8 +73,8 @@ class CallFollower:
 
         called = self._cquery.getCalled(link.getName())
 
-        for call in called:
-            child = link.addChild(call)
+        for call, line in called:
+            child = link.addChild(call, line)
             self._createCallingChain(child, counter)
 
     def getCalled(self, function, limit=0):
