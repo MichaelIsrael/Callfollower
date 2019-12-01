@@ -26,7 +26,7 @@ class CscopeResultFormatError(CodeQueryException):
         return "Failed to parse '%s' by '%s'." % (self.text, self.regex)
 
 
-class BadCscopeOut(CodeQueryException):
+class BadCscopeFile(CodeQueryException):
     def __init__(self, CscopeOut):
         self.file = Path(CscopeOut)
 
@@ -86,22 +86,19 @@ class CscopeCodeQuery(AbstractCodeQuery):
         self.log = self.log.getChild("Cscope.%s" %
                                      self.RootPath.resolve().name)
 
+    def initialize(self):
         try:
             # Look for cscope.out in the root directory.
             CscopeOut = tuple(self.RootPath.glob("cscope.out"))[0]
         except IndexError:
             self.log.debug("cscope.out not found.")
-            # None is found. Create a new cscope.files.
-            self._createFileList()
+            # None is found. Preprocess sources.
+            self.preprocess()
         else:
             # Make sure cscope.out is a regular file (or a link to one).
-            if CscopeOut.is_file():
-                self.log.debug("cscope.out found. Adding '-d' to args.")
-                # -d tell cscope to skip recreating cscope.out.
-                self._args.append("-d")
-            else:
+            if not CscopeOut.is_file():
                 self.log.critical("cscope.out found but is not a file.")
-                raise BadCscopeOut(CscopeOut)
+                raise BadCscopeFile(CscopeOut)
 
     def _createFileList(self):
         self.log.info("Creating a new cscope.files")
@@ -121,7 +118,7 @@ class CscopeCodeQuery(AbstractCodeQuery):
             File.write(str(f.resolve())+"\n")
 
     def _query(self, num, string):
-        query = "-L{num}{string}".format(num=num, string=string)
+        query = "-qL{num}{string}".format(num=num, string=string)
         cscopeCmd = ["cscope", *self._args, query]
         self.log.debug("Running query: '%s'.", cscopeCmd)
         proc = subprocess.run(cscopeCmd,
@@ -167,3 +164,41 @@ class CscopeCodeQuery(AbstractCodeQuery):
                       function,
                       str([d.getLocation() for d in definitions]))
         return definitions
+
+    def clean(self):
+        self.log.info("Deleting cscope files.")
+        files = [r"cscope.out", r"cscope.files",
+                 r"cscope.in.out", r"cscope.po.out",
+                 ]
+        for f in files:
+            out = self.RootPath.joinpath(f)
+            self.log.debug("Removing '%s'.", out.resolve())
+            try:
+                out.unlink()
+            except FileNotFoundError:
+                self.log.debug("'%s' was not found.", out.resolve())
+                pass
+
+    def preprocess(self):
+        self.log.info("Preprocessing sources.")
+
+        # Remove old files.
+        self.clean()
+
+        # Create list of source files.
+        self._createFileList()
+
+        # Create cscope database.
+        cscopeCmd = ["cscope", "-qb"]
+        self.log.debug("Running query: '%s'.", cscopeCmd)
+        proc = subprocess.run(cscopeCmd,
+                              cwd=self.RootPath,
+                              encoding="UTF-8",
+                              stdout=subprocess.PIPE)
+        self.log.debug("Cscope returned: '%s'.", proc)
+
+        if proc.returncode != 0:
+            raise CscopeError(proc.args, proc.returncode)
+
+        # -d tells cscope not to update the cross-reference.
+        self._args.append("-d")

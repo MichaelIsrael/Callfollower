@@ -32,15 +32,34 @@ class AbstractCodeQuery(ABC):
             raise InvalidRootDirError(root_dir)
 
     @abstractmethod
+    def initialize(self):
+        """ Initialize CodeQuery (reading and checking preprocessing
+            files, etc.)."""
+        raise NotImplementedError
+
+    @abstractmethod
     def getCaller(self, function):
+        """ Return the caller(s) of a certain functions. """
         raise NotImplementedError
 
     @abstractmethod
     def getCalled(self, function):
+        """ Return the function(s) called by a certain functions. """
         raise NotImplementedError
 
     @abstractmethod
     def getDefinition(self, function):
+        """ Return the definition(s) of a certain functions. """
+        raise NotImplementedError
+
+    @abstractmethod
+    def clean(self):
+        """ Clean preprocessing files. """
+        raise NotImplementedError
+
+    @abstractmethod
+    def preprocess(self):
+        """ Preprocess source files. """
         raise NotImplementedError
 
 

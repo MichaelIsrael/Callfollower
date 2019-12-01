@@ -49,6 +49,8 @@ class CallFollower:
     def getCaller(self, function, limit=0):
         self.log.info("Getting callers of '%s' (limit = %d).", function, limit)
 
+        self._cquery.initialize()
+
         if limit == 0:
             counter = None
         else:
@@ -79,6 +81,8 @@ class CallFollower:
         self.log.info("Getting function called by '%s' (limit = %d).",
                       function, limit)
 
+        self._cquery.initialize()
+
         if limit == 0:
             counter = None
         else:
@@ -94,6 +98,8 @@ class CallFollower:
         self.log.info("Getting full call tree of '%s' (limit = %d).",
                       function, limit)
 
+        self._cquery.initialize()
+
         if limit == 0:
             counter = None
         else:
@@ -105,6 +111,10 @@ class CallFollower:
         self._createCallerChain(rootLink, counter)
         self._createCallingChain(rootLink, counter)
         return chain
+
+    def preprocess(self):
+        self.log.info("Invoking preprocessor.")
+        self._cquery.preprocess()
 
 
 #######################################
@@ -313,7 +323,7 @@ class CallFollowerRunner:
 
     def preprocess(self, args):
         """Run the 'preprocess' subcommand."""
-        raise NotImplementedError
+        self.follower.preprocess()
 
     def followUp(self, args):
         """Run the 'follow up' subcommand."""
