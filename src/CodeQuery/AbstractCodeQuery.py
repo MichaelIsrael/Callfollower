@@ -81,7 +81,7 @@ class CodeDefinition:
         return (self._file, self._line)
 
     def getFullName(self):
-        return '"{}-{}:\n{}"'.format(self._file.name, self._line, self._name)
+        return '{}-{}:\n{}'.format(self._file.name, self._line, self._name)
 
     def __hash__(self):
         return hash((self._file, self._line))

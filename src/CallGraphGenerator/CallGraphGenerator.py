@@ -1,3 +1,5 @@
+from pathlib import Path
+import pygraphviz
 import logging
 import os
 
@@ -9,16 +11,22 @@ class NodeRole:
 
 
 class CallGraphGenerator:
-    def __init__(self, name, filename=None):
+    def __init__(self, name, filename=None, filetype=None):
         self.log = logging.getLogger("CallFollower.CallGraphGenerator.%s" %
                                      name)
 
         self.name = name
 
         if filename:
-            self.filename = filename
+            self.filename = Path(filename)
+            if filetype:
+                if self.filename.suffix != r"." + filetype:
+                    self.log.warning("HHHHEEEYYY")
         else:
-            self.filename = name + r".gv"
+            try:
+                self.filename = Path(name + r"." + filetype)
+            except TypeError:
+                self.filename = Path(name + r".png")
 
         self.count = 0
 
@@ -31,17 +39,20 @@ class CallGraphGenerator:
 
     def open(self):
         self.log.info("Creating file '%s'", self.filename)
-        self.file = open(self.filename, 'w')
-        self.file.write("""digraph %s {
-node [shape=circle, fontsize=12, fontname="Courier", height=.1];
-ranksep=.3;
-edge [arrowsize=1]
-""" % self.name)
+        self.AG = pygraphviz.AGraph(name=self.name,
+                                    strict=False,
+                                    directed=True)
+        self.AG.graph_attr.update(ranksep='0.3')
+        self.AG.node_attr.update(shape="circle",
+                                 fontsize=12,
+                                 fontname="Courier",
+                                 height=.1)
+        self.AG.edge_attr.update(arrowsize=1)
 
     def define(self, node):
-        """
         params = {}
-        params['label'] = Label
+        params['label'] = node.getFullName()
+        """
         params['style'] = "filled"
 
         if role == NodeRole.Root:
@@ -52,24 +63,19 @@ edge [arrowsize=1]
             params['fillcolor'] = "yellow"
         else:
             params['fillcolor'] = "mediumseagreen"
-        params = " ".join(['{}={}'.format(k, v) \
-                           for k, v in params.items()])
         """
-        params = "label={}".format(node.getFullName())
 
         self.log.debug("Defining node '%s'. parameters: %s.",
                        node.getName(), str(params))
 
-        self.file.write('{} [{}]\n'.format("Node" + str(node.getUniqueId()),
-                                           params))
+        self.AG.add_node("Node" + str(node.getUniqueId()), **params)
 
     def link(self, n1, n2):
         self.log.debug("Adding link '%s' (%d) to '%s' (%d).",
                        n1.getName(), n1.getUniqueId(),
                        n2.getName(), n2.getUniqueId())
-
-        self.file.write('{} -> {}\n'.format("Node" + str(n1.getUniqueId()),
-                                            "Node" + str(n2.getUniqueId())))
+        self.AG.add_edge("Node" + str(n1.getUniqueId()),
+                         "Node" + str(n2.getUniqueId()))
 
     def __exit__(self, *exc_info):
         self.close()
@@ -78,5 +84,5 @@ edge [arrowsize=1]
 
     def close(self):
         self.log.info("Closing file '%s'", self.filename)
-        self.file.write("}\n")
-        self.file.close()
+        self.AG.layout(prog="dot")
+        self.AG.draw(self.name+".png")

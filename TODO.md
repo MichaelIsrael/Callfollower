@@ -6,7 +6,7 @@
 * [ ] Recognize calls through function pointers from function argument.
 * [ ] Recognize calls through assigned function pointers.
 * [x] Preprocessing for a faster chain generation (useful for big projects).
-* [ ] Use graphviz instead of generating gv files.
+* [x] Use pygraphviz instead of generating gv files.
 * [ ] Implement a different CodeQuery.
 * [ ] Grouping files in graph.
 * [ ] Grouping functions of the same name in graph.
