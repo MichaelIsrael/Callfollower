@@ -1,7 +1,7 @@
 # TODO:
 * [x] Initial commit.
 * [x] Do not show several calls of the same function.
-* [ ] Correctly display recursion.
+* [x] Correctly display recursion.
 * [x] Logging.
 * [ ] Recognize calls through function pointers from function argument.
 * [ ] Recognize calls through assigned function pointers.
