@@ -1,5 +1,5 @@
-from CodeQuery.AbstractCodeQuery import AbstractCodeQuery, CodeDefinition
-from CodeQuery.AbstractCodeQuery import CodeQueryException
+from CodeParser.AbstractCodeParser import AbstractCodeParser, CodeDefinition
+from CodeParser.AbstractCodeParser import CodeParserException
 from pathlib import Path
 import subprocess
 import logging
@@ -17,7 +17,7 @@ def BuildRegex():
     return CSCOPE_ENTRY_REGEX.format("|".join(KNOWN_EXTENSIONS))
 
 
-class CscopeResultFormatError(CodeQueryException):
+class CscopeResultFormatError(CodeParserException):
     def __init__(self, text, regex):
         self.text = text
         self.regex = regex
@@ -26,7 +26,7 @@ class CscopeResultFormatError(CodeQueryException):
         return "Failed to parse '%s' by '%s'." % (self.text, self.regex)
 
 
-class BadCscopeFile(CodeQueryException):
+class BadCscopeFile(CodeParserException):
     def __init__(self, CscopeOut):
         self.file = Path(CscopeOut)
 
@@ -34,7 +34,7 @@ class BadCscopeFile(CodeQueryException):
         return "'%s' is not valid." % self.file.resolve()
 
 
-class CscopeError(CodeQueryException):
+class CscopeError(CodeParserException):
     def __init__(self, cmd, ret):
         self.cmd = cmd
         self.ret = ret
@@ -76,10 +76,10 @@ class CscopeCodeDefinition(CodeDefinition):
                                                    result.getLine())
 
 
-class CscopeCodeQuery(AbstractCodeQuery):
+class Cscope(AbstractCodeParser):
     def __init__(self, root_dir=r"."):
-        # Calling constructor of AbstractCodeQuery
-        super(CscopeCodeQuery, self).__init__(root_dir)
+        # Calling constructor of AbstractCodeParser
+        super(Cscope, self).__init__(root_dir)
         # A list to store cscope arguments.
         self._args = []
         # Get own logger.

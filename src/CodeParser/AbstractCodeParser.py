@@ -6,11 +6,11 @@ import sys
 positivier = 2 * (sys.maxsize + 1)
 
 
-class CodeQueryException(Exception):
+class CodeParserException(Exception):
     pass
 
 
-class InvalidRootDirError(CodeQueryException):
+class InvalidRootDirError(CodeParserException):
     def __init__(self, root_dir):
         self.root_dir = root_dir
 
@@ -18,13 +18,13 @@ class InvalidRootDirError(CodeQueryException):
         return "'%s' is not a valid directory" % self.root_dir
 
 
-class AbstractCodeQuery(ABC):
+class AbstractCodeParser(ABC):
     def __init__(self, root_dir=r"."):
         # Create logger.
-        self.log = logging.getLogger("CallFollower.CodeQuery")
+        self.log = logging.getLogger("CallFollower.AbstractCodeParser")
         # Creating Path object.
         self.RootPath = Path(root_dir)
-        self.log.debug("Creating a CodeQuery object at '%s'",
+        self.log.debug("Creating a CodeParser object at '%s'",
                        self.RootPath.resolve())
         # Make sure it is valid.
         if not self.RootPath.is_dir():
@@ -33,7 +33,7 @@ class AbstractCodeQuery(ABC):
 
     @abstractmethod
     def initialize(self):
-        """ Initialize CodeQuery (reading and checking preprocessing
+        """ Initialize CodeParser (reading and checking preprocessing
             files, etc.)."""
         raise NotImplementedError
 

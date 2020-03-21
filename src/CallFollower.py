@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from CallChain import CallChain
-from CodeQuery import CscopeCodeQuery
+from CodeParser import ParserType
 import argparse
 import logging
 import sys
@@ -26,10 +26,12 @@ ARGPARSE_VERSION_TXT = '%(prog)s {}'.format(VERSION_TXT)
 # CallFollower                        #
 #######################################
 class CallFollower:
-    def __init__(self, root_dir=r"."):
+    def __init__(self, root_dir=r".", parser=ParserType.Cscope):
         self.log = logging.getLogger("CallFollower.CallFollower")
-        self.log.debug("Creating CscopeCodeQuery instance.")
-        self._cquery = CscopeCodeQuery(root_dir)
+        self.log.debug("Creating a CodeQuery instance of type '" +
+                       str(parser) + "'.")
+        print(ParserType.getList())
+        self._cquery = parser(root_dir)
 
     def _createCallerChain(self, link, counter):
         self.log.debug("_createCallerChain: %s. Counter = %d.", link, counter)
