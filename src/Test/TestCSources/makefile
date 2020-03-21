@@ -1,18 +1,22 @@
-CC := gcc
-RM := rm -f
-OBJ := Children.o GrandChildren.o GrandParents.o Parents.o Relative.o 
-TEST_OBJ := main.o
-TEST_EXEC := test
+MAKE        := make
+CC          := gcc
+RM          := rm -f
+TEST_EXEC   := test
+TEST_OBJ    := main.o
+SRCS        := $(wildcard */*.c) $(wildcard */*.cpp)
+OBJS        := $(patsubst %.c, %.o, $(SRCS))
 
-%.o: %.c %.h
-	$(CC) -c $*.c -o $*.o
+%.o: %.c
+	$(CC) $^ -c -o $@
 
 clean:
-	$(RM) $(OBJ) $(TEST_OBJ) $(TEST_EXEC)
+	$(RM) $(OBJS) $(TEST_OBJ) $(TEST_EXEC)
 
-build: $(OBJ)
+build: $(OBJS)
 
-test: $(OBJ) $(TEST_OBJ)
-	$(CC) $^ -o $(TEST_EXEC)
+test: $(TEST_OBJ) build
+	$(CC) $(TEST_OBJ) $(OBJS) -o $(TEST_EXEC)
 
 all: test
+
+.PHONY: clean build test all
