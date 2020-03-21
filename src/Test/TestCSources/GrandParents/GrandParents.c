@@ -1,7 +1,7 @@
 #include "GrandParents.h"
-#include "Parents.h"
-#include "Relative.h"
-#include "Children.h"
+#include "../Parents/Parents.h"
+#include "../Relative/Relative.h"
+#include "../Children/Children.h"
 
 #if defined FOO
 void GrandParent1(void)

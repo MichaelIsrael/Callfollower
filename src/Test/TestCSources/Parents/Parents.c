@@ -1,7 +1,7 @@
-#include "GrandParents.h"
 #include "Parents.h"
-#include "Relative.h"
-#include "Children.h"
+#include "../GrandParents/GrandParents.h"
+#include "../Relative/Relative.h"
+#include "../Children/Children.h"
 
 void Parent1(void)
 {
