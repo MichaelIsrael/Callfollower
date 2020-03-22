@@ -26,11 +26,10 @@ ARGPARSE_VERSION_TXT = '%(prog)s {}'.format(VERSION_TXT)
 # CallFollower                        #
 #######################################
 class CallFollower:
-    def __init__(self, root_dir=r".", parser=ParserType.Cscope):
+    def __init__(self, root_dir=r".", parser=ParserType.Default):
         self.log = logging.getLogger("CallFollower.CallFollower")
         self.log.debug("Creating a CodeQuery instance of type '" +
                        str(parser) + "'.")
-        print(ParserType.getList())
         self._cquery = parser(root_dir)
 
     def _createCallerChain(self, link, counter):
