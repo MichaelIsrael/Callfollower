@@ -43,6 +43,11 @@ class CscopeError(CodeParserException):
         return "Command '%s' returned %d." % (self.cmd, self.ret)
 
 
+class CscopeNotInstalledError(CodeParserException):
+    def __str__(self):
+        return "cscope is not installed."
+
+
 class CscopeResult:
     def __init__(self, entry):
         self.log = logging.getLogger("CallFollower.CscopeResult")
@@ -84,12 +89,12 @@ class Cscope(AbstractCodeParser):
         self._args = []
         # Get own logger.
         self.log = self.log.getChild("Cscope.%s" %
-                                     self.RootPath.resolve().name)
+                                     self.getRootDir().resolve().name)
 
     def initialize(self):
         try:
             # Look for cscope.out in the root directory.
-            CscopeOut = tuple(self.RootPath.glob("cscope.out"))[0]
+            CscopeOut = tuple(self.getRootDir().glob("cscope.out"))[0]
         except IndexError:
             self.log.debug("cscope.out not found.")
             # None is found. Preprocess sources.
@@ -103,7 +108,7 @@ class Cscope(AbstractCodeParser):
     def _createFileList(self):
         self.log.info("Creating a new cscope.files")
         # Create a new cscope.files.
-        with open(self.RootPath.joinpath("cscope.files"), "w+") as files:
+        with open(self.getRootDir().joinpath("cscope.files"), "w+") as files:
             # Add all known files.
             for ext in KNOWN_EXTENSIONS:
                 self._addToList(files, r"*." + ext)
@@ -111,7 +116,7 @@ class Cscope(AbstractCodeParser):
     def _addToList(self, File, pattern):
         self.log.info("Adding '%s' to the list of files.", pattern)
         # Looking for the pattern recursively in the root directory.
-        lst = self.RootPath.rglob(pattern)
+        lst = self.getRootDir().rglob(pattern)
         # Add every found file to cscope.files.
         for f in lst:
             self.log.debug("Found '%s'.", f)
@@ -122,9 +127,10 @@ class Cscope(AbstractCodeParser):
         cscopeCmd = ["cscope", *self._args, query]
         self.log.debug("Running query: '%s'.", cscopeCmd)
         proc = subprocess.run(cscopeCmd,
-                              cwd=self.RootPath,
-                              encoding="UTF-8",
-                              stdout=subprocess.PIPE)
+                              cwd=self.getRootDir(),
+                              check=True,
+                              capture_output=True,
+                              text=True)
         self.log.debug("Query returned: '%s'.", proc)
 
         if proc.returncode != 0:
@@ -171,7 +177,7 @@ class Cscope(AbstractCodeParser):
                  r"cscope.in.out", r"cscope.po.out",
                  ]
         for f in files:
-            out = self.RootPath.joinpath(f)
+            out = self.getRootDir().joinpath(f)
             self.log.debug("Removing '%s'.", out.resolve())
             try:
                 out.unlink()
@@ -192,7 +198,7 @@ class Cscope(AbstractCodeParser):
         cscopeCmd = ["cscope", "-qb"]
         self.log.debug("Running query: '%s'.", cscopeCmd)
         proc = subprocess.run(cscopeCmd,
-                              cwd=self.RootPath,
+                              cwd=self.getRootDir(),
                               encoding="UTF-8",
                               stdout=subprocess.PIPE)
         self.log.debug("Cscope returned: '%s'.", proc)
@@ -202,3 +208,18 @@ class Cscope(AbstractCodeParser):
 
         # -d tells cscope not to update the cross-reference.
         self._args.append("-d")
+
+
+# make sure cscope is installed.
+cscopeVersionCmd = ["cscope", "--version"]
+try:
+    # Note: For some reason, cscope prints the version to stderr.
+    proc = subprocess.run(cscopeVersionCmd,
+                          timeout=2,
+                          check=True,
+                          capture_output=True,
+                          text=True)
+except OSError:
+    raise CscopeNotInstalledError()
+except subprocess.CalledProcessError as e:
+    raise CscopeError(e.cmd, e.returncode)
