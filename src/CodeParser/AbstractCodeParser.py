@@ -21,15 +21,18 @@ class InvalidRootDirError(CodeParserException):
 class AbstractCodeParser(ABC):
     def __init__(self, root_dir=r"."):
         # Create logger.
-        self.log = logging.getLogger("CallFollower.AbstractCodeParser")
+        self.log = logging.getLogger("CallFollower.CodeParser")
         # Creating Path object.
-        self.RootPath = Path(root_dir)
+        self._rootPath = Path(root_dir)
         self.log.debug("Creating a CodeParser object at '%s'",
-                       self.RootPath.resolve())
+                       self._rootPath.resolve())
         # Make sure it is valid.
-        if not self.RootPath.is_dir():
+        if not self._rootPath.is_dir():
             self.log.critical("'%s' is not a valid directory", root_dir)
             raise InvalidRootDirError(root_dir)
+
+    def getRootDir(self):
+        return self._rootPath
 
     @abstractmethod
     def initialize(self):
