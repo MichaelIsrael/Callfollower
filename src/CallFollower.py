@@ -21,6 +21,10 @@ VERSION = {"Major": 0,
 VERSION_TXT = '{Major}.{Minor}'.format(**VERSION)
 ARGPARSE_VERSION_TXT = '%(prog)s {}'.format(VERSION_TXT)
 
+# Formating for log files.
+LogFileFormat = "{asctime}  {levelname:8}  {name:50} {message}"
+dateFormat = '%Y-%m-%d %H:%M:%S'
+
 
 #######################################
 # CallFollower                        #
@@ -125,9 +129,6 @@ class CallFollowerRunner:
     def __init__(self):
         # Create logger.
         self.rootlog = logging.getLogger("CallFollower")
-        StdOutHandler = logging.StreamHandler(sys.stdout)
-        StdOutHandler.setFormatter(logging.Formatter('%(name)s: %(message)s'))
-        self.rootlog.addHandler(StdOutHandler)
         self.log = logging.getLogger("CallFollower.CallFollowerRunner")
 
         #######################################################################
@@ -155,8 +156,17 @@ class CallFollowerRunner:
         self.parser.add_argument("-d",
                                  "--dir",
                                  help="Root directory for parsing.",
-                                 metavar="dir",
+                                 metavar="DIR",
                                  default=".",
+                                 action="store")
+
+        # -L, --log
+        self.parser.add_argument("-L",
+                                 "--log",
+                                 help="log file.",
+                                 metavar="FILE",
+                                 dest="LogFile",
+                                 default=None,
                                  action="store")
 
         #######################################################################
@@ -297,15 +307,43 @@ class CallFollowerRunner:
         # Parse arguments
         args = self.parser.parse_args()
 
+        if args.LogFile:
+            LogFileHandler = logging.FileHandler(args.LogFile)
+            LogFileHandler.setFormatter(logging.Formatter(LogFileFormat,
+                                                          datefmt=dateFormat,
+                                                          style="{"))
+            self.rootlog.addHandler(LogFileHandler)
+
+        # Stdout logger.
+        StdOutHandler = logging.StreamHandler(sys.stdout)
+        StdOutHandler.setFormatter(logging.Formatter('{message}', style="{"))
+        StdOutHandler.setLevel(logging.WARNING)
+        self.rootlog.addHandler(StdOutHandler)
+
+        logLevel = logging.WARNING
         # Parse verbosity
         if args.verbose >= 2:
-            self.rootlog.setLevel(logging.DEBUG)
-            self.log.debug("Verbosity = %d. Setting log level to DEBUG",
-                           args.verbose)
+            logLevel = logging.DEBUG
         elif args.verbose == 1:
-            self.rootlog.setLevel(logging.INFO)
-            self.log.debug("Verbosity = %d. Setting log level to INFO",
-                           args.verbose)
+            logLevel = logging.INFO
+
+        # Set log level of the root logger.
+        self.rootlog.setLevel(logLevel)
+
+        # Set log level of the handler in focus.
+        # Note: stdout is always used at least for WARNING level.
+        if args.LogFile:
+            LogFileHandler.setLevel(logLevel)
+            self.log.debug("Verbosity = %d. Setting log level to %s for %s.",
+                           args.verbose,
+                           logging.getLevelName(logLevel),
+                           args.LogFile)
+        else:
+            StdOutHandler.setLevel(logLevel)
+            self.log.debug("Verbosity = %d. " +
+                           "Setting log level to %s for stdout.",
+                           args.verbose,
+                           logging.getLevelName(logLevel))
 
         self.log.debug("Started with args %s.", str(args))
 
