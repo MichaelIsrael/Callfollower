@@ -126,15 +126,16 @@ class Cscope(AbstractCodeParser):
         query = "-qL{num}{string}".format(num=num, string=string)
         cscopeCmd = ["cscope", *self._args, query]
         self.log.debug("Running query: '%s'.", cscopeCmd)
-        proc = subprocess.run(cscopeCmd,
-                              cwd=self.getRootDir(),
-                              check=True,
-                              capture_output=True,
-                              text=True)
-        self.log.debug("Query returned: '%s'.", proc)
+        try:
+            proc = subprocess.run(cscopeCmd,
+                                  cwd=self.getRootDir(),
+                                  check=True,
+                                  capture_output=True,
+                                  text=True)
+        except subprocess.CalledProcessError as e:
+            raise CscopeError(e.cmd, e.returncode) from None
 
-        if proc.returncode != 0:
-            raise CscopeError(proc.args, proc.returncode)
+        self.log.debug("Query returned: '%s'.", proc.returncode)
 
         return proc.stdout.splitlines()
 
@@ -196,15 +197,17 @@ class Cscope(AbstractCodeParser):
 
         # Create cscope database.
         cscopeCmd = ["cscope", "-qb"]
-        self.log.debug("Running query: '%s'.", cscopeCmd)
-        proc = subprocess.run(cscopeCmd,
-                              cwd=self.getRootDir(),
-                              encoding="UTF-8",
-                              stdout=subprocess.PIPE)
-        self.log.debug("Cscope returned: '%s'.", proc)
+        self.log.debug("Building database using '%s'.", cscopeCmd)
+        try:
+            proc = subprocess.run(cscopeCmd,
+                                  cwd=self.getRootDir(),
+                                  check=True,
+                                  capture_output=True,
+                                  text=True)
+        except subprocess.CalledProcessError as e:
+            raise CscopeError(e.cmd, e.returncode) from None
 
-        if proc.returncode != 0:
-            raise CscopeError(proc.args, proc.returncode)
+        self.log.debug("Cscope returned: '%s'.", proc.returncode)
 
         # -d tells cscope not to update the cross-reference.
         self._args.append("-d")
@@ -220,6 +223,6 @@ try:
                           capture_output=True,
                           text=True)
 except OSError:
-    raise CscopeNotInstalledError()
+    raise CscopeNotInstalledError() from None
 except subprocess.CalledProcessError as e:
-    raise CscopeError(e.cmd, e.returncode)
+    raise CscopeError(e.cmd, e.returncode) from None
