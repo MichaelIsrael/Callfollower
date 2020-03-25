@@ -1,12 +1,12 @@
 from CodeParser.AbstractCodeParser import AbstractCodeParser, CodeDefinition
 from CodeParser.AbstractCodeParser import CodeParserException
+from CodeParser import SUPPORTED_FILE_TYPES
 from pathlib import Path
 import subprocess
 import logging
 import re
 
 
-KNOWN_EXTENSIONS = [r"c", r"cpp", r"h"]
 CSCOPE_ENTRY_REGEX = r"(?P<File>.+\.({}))\s+" + \
                      r"(?P<Function>(\S+))\s+" + \
                      r"(?P<Line>\d+)\s+" + \
@@ -14,7 +14,7 @@ CSCOPE_ENTRY_REGEX = r"(?P<File>.+\.({}))\s+" + \
 
 
 def BuildRegex():
-    return CSCOPE_ENTRY_REGEX.format("|".join(KNOWN_EXTENSIONS))
+    return CSCOPE_ENTRY_REGEX.format("|".join(SUPPORTED_FILE_TYPES["C"]))
 
 
 class CscopeResultFormatError(CodeParserException):
@@ -110,7 +110,7 @@ class Cscope(AbstractCodeParser):
         # Create a new cscope.files.
         with open(self.getRootDir().joinpath("cscope.files"), "w+") as files:
             # Add all known files.
-            for ext in KNOWN_EXTENSIONS:
+            for ext in SUPPORTED_FILE_TYPES["C"]:
                 self._addToList(files, r"*." + ext)
 
     def _addToList(self, File, pattern):
