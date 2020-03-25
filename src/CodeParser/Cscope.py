@@ -87,9 +87,6 @@ class Cscope(AbstractCodeParser):
         super(Cscope, self).__init__(root_dir)
         # A list to store cscope arguments.
         self._args = []
-        # Get own logger.
-        self.log = self.log.getChild("Cscope.%s" %
-                                     self.getRootDir().resolve().name)
 
     def initialize(self):
         try:
