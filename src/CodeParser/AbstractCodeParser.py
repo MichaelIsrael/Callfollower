@@ -20,7 +20,6 @@ class InvalidRootDirError(CodeParserException):
 
 class AbstractCodeParser(ABC):
     def __init__(self, root_dir=r"."):
-        print(self.__class__.__name__)
         # Create base logger.
         _log = logging.getLogger("CallFollower.CodeParser")
         # Creating Path object.
