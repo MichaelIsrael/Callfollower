@@ -1,6 +1,6 @@
-from CodeParser.AbstractCodeParser import AbstractCodeParser, CodeDefinition
-from CodeParser.AbstractCodeParser import CodeParserException
-from CodeParser import SUPPORTED_FILE_TYPES
+from .abstractcodeparser import AbstractCodeParser, CodeDefinition
+from .abstractcodeparser import CodeParserException
+from . import SUPPORTED_FILE_TYPES
 from pathlib import Path
 import subprocess
 import logging

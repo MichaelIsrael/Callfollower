@@ -1,4 +1,4 @@
-from CallGraphGenerator import CallGraphGenerator  # , NodeRole
+from .callgraphgenerator import CallGraphGenerator  # , NodeRole
 import logging
 
 
