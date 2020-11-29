@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from .callchain import CallChain
+from .callgraph import CallGraph, CallGraphNode, CallGraphEdge
 from .codeparser import ParserType
 import logging
 
@@ -14,20 +14,20 @@ class CallFollower:
                        str(parser) + "'.")
         self._cquery = parser(root_dir)
 
-    def _createCallerChain(self, link, counter):
-        self.log.debug("_createCallerChain: %s. Counter = %d.", link, counter)
+    def _createCallerChain(self, graph, node, counter):
+        self.log.debug("_createCallerChain: %s. Counter = %d.", node, counter)
 
         if counter is not None:
-            if counter != 0:
-                counter -= 1
-            else:
+            if counter == 0:
                 return
+            counter -= 1
 
-        callers = self._cquery.getCaller(link.getName())
+        callers = self._cquery.getCaller(node.data["function"])
 
         for caller, line in callers:
-            parent = link.addParent(caller, line)
-            self._createCallerChain(parent, counter)
+            parent = CallGraphNode(caller.function, caller)
+            graph.add_edge(CallGraphEdge(parent, node, {"lines": [line]}))
+            self._createCallerChain(graph, parent, counter)
 
     def getCaller(self, function, limit=0):
         self.log.info("Getting callers of '%s' (limit = %d).", function, limit)
@@ -39,26 +39,27 @@ class CallFollower:
         else:
             counter = limit
 
-        rootFunction = self._cquery.getDefinition(function)[0]
-        chain = CallChain(function, rootFunction)
-        rootLink = chain.getRoot()
-        self._createCallerChain(rootLink, counter)
-        return chain
+        graph = CallGraph(function)
+        for func_def in self._cquery.getDefinition(function):
+            node = CallGraphNode(func_def.function, func_def)
+            graph.add_node(node)
+            self._createCallerChain(graph, node, counter)
+        return graph
 
-    def _createCallingChain(self, link, counter):
-        self.log.debug("_createCallingChain: %s. Counter = %d.", link, counter)
+    def _createCallingChain(self, graph, node, counter):
+        self.log.debug("_createCallingChain: %s. Counter = %d.", node, counter)
 
         if counter is not None:
-            if counter != 0:
-                counter -= 1
-            else:
+            if counter == 0:
                 return
+            counter -= 1
 
-        called = self._cquery.getCalled(link.getName())
+        called = self._cquery.getCalled(node.data["function"])
 
         for call, line in called:
-            child = link.addChild(call, line)
-            self._createCallingChain(child, counter)
+            child = CallGraphNode(call.function, call)
+            graph.add_edge(CallGraphEdge(node, child, {"lines": [line]}))
+            self._createCallingChain(graph, child, counter)
 
     def getCalled(self, function, limit=0):
         self.log.info("Getting function called by '%s' (limit = %d).",
@@ -71,11 +72,12 @@ class CallFollower:
         else:
             counter = limit
 
-        rootFunction = self._cquery.getDefinition(function)[0]
-        chain = CallChain(function, rootFunction)
-        rootLink = chain.getRoot()
-        self._createCallingChain(rootLink, counter)
-        return chain
+        graph = CallGraph(function)
+        for func_def in self._cquery.getDefinition(function):
+            node = CallGraphNode(func_def.function, func_def)
+            graph.add_node(node)
+            self._createCallingChain(graph, node, counter)
+        return graph
 
     def getFullTree(self, function, limit=0):
         self.log.info("Getting full call tree of '%s' (limit = %d).",
@@ -88,12 +90,13 @@ class CallFollower:
         else:
             counter = limit
 
-        rootFunction = self._cquery.getDefinition(function)[0]
-        chain = CallChain(function, rootFunction)
-        rootLink = chain.getRoot()
-        self._createCallerChain(rootLink, counter)
-        self._createCallingChain(rootLink, counter)
-        return chain
+        graph = CallGraph(function)
+        for func_def in self._cquery.getDefinition(function):
+            node = CallGraphNode(func_def.function, func_def)
+            graph.add_node(node)
+            self._createCallerChain(graph, node, counter)
+            self._createCallingChain(graph, node, counter)
+        return graph
 
     def preprocess(self):
         self.log.info("Invoking preprocessor.")
