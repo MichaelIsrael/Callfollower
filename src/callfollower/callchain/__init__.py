@@ -1,6 +1,16 @@
-__all__ = ["CallChain", "CallGraphGenerator", "NodeRole"]
+__all__ = ["CallGraph",
+           "CallGraphNode",
+           "CallGraphEdge",
+           "GraphType"
+           ]
 __author__ = "Michael Israel"
 
 
-from .callchain import CallChain
-from .callgraphgenerator import CallGraphGenerator, NodeRole
+from .callgraph import CallGraph, CallGraphNode, CallGraphEdge
+from .callgraphgenerator import GraphvizGraphGenerator
+from enum import Enum
+
+
+class GraphType(Enum):
+    Graphviz = GraphvizGraphGenerator
+    Default = Graphviz
