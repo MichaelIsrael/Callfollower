@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
+# PYTHON_ARGCOMPLETE_OK
 from callfollower import CallFollower
+from callfollower.callgraph import GraphType
 from callfollower import __version__ as VERSION
+from operator import attrgetter
 import argparse
 import logging
 import sys
 try:
     # Not really necessary.
     import argcomplete
-    # PYTHON_ARGCOMPLETE_OK
 except ModuleNotFoundError:
     pass
-
 
 
 #######################################
@@ -26,11 +27,11 @@ dateFormat = '%Y-%m-%d %H:%M:%S'
 #######################################
 # Standalone runner.                  #
 #######################################
-class CallFollowerRunner:
+class CallFollowerCli:
     def __init__(self):
         # Create logger.
         self.rootlog = logging.getLogger("CallFollower")
-        self.log = logging.getLogger("CallFollower.CallFollowerRunner")
+        self.log = logging.getLogger("CallFollower.CallFollowerCli")
 
         #######################################################################
         # Start of argparse configuration.                                    #
@@ -93,7 +94,7 @@ class CallFollowerRunner:
                              action="store")
 
         #######################################################################
-        # Preprocess                                                          #
+        # preprocess                                                          #
         #######################################################################
         CmdPreprocess = subparsers.add_parser(
                 "preprocess",
@@ -146,6 +147,17 @@ class CallFollowerRunner:
                            metavar="N",
                            default=0)
 
+        # -g, --graph
+        CmdUp.add_argument("-g",
+                           "--graph",
+                           help="the graph genertor.",
+                           action="store",
+                           type=self._graph_type_from_string,
+                           choices=GraphType,
+                           metavar=str(list(map(attrgetter("name"),
+                                                GraphType))),
+                           default=GraphType.Default)
+
         #######################################################################
         # follow down                                                         #
         #######################################################################
@@ -169,6 +181,17 @@ class CallFollowerRunner:
                              type=int,
                              metavar="N",
                              default=0)
+
+        # -g, --graph
+        CmdDown.add_argument("-g",
+                             "--graph",
+                             help="the graph genertor.",
+                             action="store",
+                             type=self._graph_type_from_string,
+                             choices=GraphType,
+                             metavar=str(list(map(attrgetter("name"),
+                                                  GraphType))),
+                             default=GraphType.Default)
 
         #######################################################################
         # follow all                                                          #
@@ -194,6 +217,18 @@ class CallFollowerRunner:
                             type=int,
                             metavar="N",
                             default=0)
+
+        # -g, --graph
+        CmdAll.add_argument("-g",
+                            "--graph",
+                            help="the graph genertor.",
+                            action="store",
+                            type=self._graph_type_from_string,
+                            choices=GraphType,
+                            metavar=str(list(map(attrgetter("name"),
+                                                 GraphType))),
+                            default=GraphType.Default)
+
         #######################################################################
         # End of argpare configuration                                        #
         #######################################################################
@@ -255,6 +290,13 @@ class CallFollowerRunner:
         # Running subcommand.
         args.subcmd(args)
 
+    def _graph_type_from_string(self, name):
+        try:
+            return GraphType[name]
+        except KeyError:
+            msg = "%r is not a valid graph generator" % name
+            raise argparse.ArgumentTypeError(msg)
+
     def help(self, args):
         """Run the 'help' subcommand."""
         # Add "-h" to the commands and re-run the parser.
@@ -267,21 +309,21 @@ class CallFollowerRunner:
 
     def followUp(self, args):
         """Run the 'follow up' subcommand."""
-        chain = self.follower.getCaller(args.func, args.limit)
-        chain.generateGraph()
+        graph = self.follower.getCaller(args.func, args.limit)
+        graph.draw(args.graph.value)
 
     def followDown(self, args):
         """Run the 'follow down' subcommand."""
-        chain = self.follower.getCalled(args.func, args.limit)
-        chain.generateGraph()
+        graph = self.follower.getCalled(args.func, args.limit)
+        graph.draw(args.graph.value)
 
     def followAll(self, args):
         """Run the 'follow all' subcommand."""
-        chain = self.follower.getFullTree(args.func, args.limit)
-        chain.generateGraph()
+        graph = self.follower.getFullTree(args.func, args.limit)
+        graph.draw(args.graph.value)
 
 
 if __name__ == "__main__":
     # Create a standalone runnner instanace and run it.
-    runner = CallFollowerRunner()
+    runner = CallFollowerCli()
     runner.run()
