@@ -7,7 +7,7 @@ __author__ = "Michael Israel"
 
 
 from .callgraph import CallGraph, CallGraphNode, CallGraphEdge
-from .callgraphgenerator import GraphvizGraphGenerator
+from .graphizgraphgenerator import GraphvizGraphGenerator
 from enum import Enum
 
 
