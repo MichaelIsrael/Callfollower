@@ -18,9 +18,14 @@
 fPtr gFunc1;
 fPtr gFunc2;
 
+fPtr returnChild(fPtr func)
+{
+    return func;
+}
+
 void Child1(void)
 {
-    NaughtyChild(Child2);
+    NaughtyChild(returnChild(Child2));
 }
 
 void Child2(void)
