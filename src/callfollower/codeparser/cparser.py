@@ -58,7 +58,19 @@ class CParser(AbstractCodeParser):
         self.preprocess()
 
     def getCaller(self, function):
-        raise NotImplementedError
+        # Quick and dirty (slow) implementation.
+        callers = []
+        for calling_function, f_data in self._code.items():
+            for call in f_data.calls:
+                if function in call.name.name:
+                    callers.append(
+                        (CodeDefinition(f_data.declaration.decl.name,
+                                        f_data.declaration.coord.file,
+                                        f_data.declaration.coord.line,
+                                        ),
+                         call.coord.line
+                         ))
+        return callers
 
     def getCalled(self, function):
         try:
@@ -77,7 +89,7 @@ class CParser(AbstractCodeParser):
         except KeyError:
             return [CodeDefinition(function, "Not found", 0)]
         else:
-            # TODO: Overloading!
+            # TODO: Overloading! (C++)
             return [CodeDefinition(f.decl.name, f.coord.file, f.coord.line)]
 
     def clean(self):
