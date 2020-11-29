@@ -1,19 +1,16 @@
+from .abstractgraphgenerator import AbstractGraphGenerator
 from pathlib import Path
 import pygraphviz
 import logging
-import os
+import sys
 
 
-class NodeRole:
-    Root = 0
-    Parent = 1
-    Child = 2
+class GraphvizGraphGenerator(AbstractGraphGenerator):
+    _hash_positivier = 2 * (sys.maxsize + 1)
 
-
-class CallGraphGenerator:
     def __init__(self, name, filename=None, filetype=None):
-        self.log = logging.getLogger("CallFollower.CallGraphGenerator.%s" %
-                                     name)
+        self._log = logging.getLogger("CallFollower.CallGraphGenerator.%s" %
+                                      name)
 
         self.name = name
 
@@ -21,7 +18,7 @@ class CallGraphGenerator:
             self.filename = Path(filename)
             if filetype:
                 if self.filename.suffix != r"." + filetype:
-                    self.log.warning("HHHHEEEYYY")
+                    self._log.warning("HHHHEEEYYY")
         else:
             try:
                 self.filename = Path(name + r"." + filetype)
@@ -30,15 +27,11 @@ class CallGraphGenerator:
 
         self.count = 0
 
-        self.log.debug("Creating CallGraphGenerator for file '%s'",
-                       self.filename)
-
-    def __enter__(self):
-        self.open()
-        return self
+        self._log.debug("Creating CallGraphGenerator for file '%s'",
+                        self.filename)
 
     def open(self):
-        self.log.info("Creating file '%s'", self.filename)
+        self._log.info("Creating file '%s'", self.filename)
         self.AG = pygraphviz.AGraph(name=self.name,
                                     strict=False,
                                     directed=True)
@@ -49,9 +42,15 @@ class CallGraphGenerator:
                                  height=.1)
         self.AG.edge_attr.update(arrowsize=1)
 
-    def define(self, node):
+    def add_group(self, name):
+        raise NotImplementedError()
+
+    def add_node(self, node, formatter=None):
         params = {}
-        params['label'] = node.getFullName()
+        if formatter:
+            params['label'] = formatter(node)
+        else:
+            params['label'] = node.name
         """
         params['style'] = "filled"
 
@@ -65,26 +64,32 @@ class CallGraphGenerator:
             params['fillcolor'] = "mediumseagreen"
         """
 
-        self.log.debug("Defining node '%s'. parameters: %s.",
-                       node.getName(), str(params))
+        self._log.debug("Defining node '%s'. parameters: %s.",
+                        node.name, str(params))
 
-        self.AG.add_node("Node" + str(node.getUniqueId()), **params)
+        self.AG.add_node("Node" + str(self._get_unique_id(node)), **params)
 
-    def link(self, n1, n2, line):
-        self.log.debug("Adding link '%s' (%d) to '%s' (%d).",
-                       n1.getName(), n1.getUniqueId(),
-                       n2.getName(), n2.getUniqueId())
-        self.AG.add_edge("Node" + str(n1.getUniqueId()),
-                         "Node" + str(n2.getUniqueId()),
-                         label=line,
+    def add_edge(self, edge, formatter=None):
+        """
+        self._log.debug("Adding link '%s' (%d) to '%s' (%d).",
+                        n1.name, self._get_unique_id(n1),
+                        n2.name, self._get_unique_id(n2))
+        """
+        text = None
+        if formatter:
+            try:
+                text = formatter(edge)
+            except TypeError:
+                text = formatter
+        self.AG.add_edge("Node" + str(self._get_unique_id(edge.source)),
+                         "Node" + str(self._get_unique_id(edge.destination)),
+                         label=text,
                          )
 
-    def __exit__(self, *exc_info):
-        self.close()
-        if exc_info[0]:
-            os.remove(self.filename)
+    def _get_unique_id(self, obj):
+        return hash(obj) % self._hash_positivier
 
     def close(self):
-        self.log.info("Closing file '%s'", self.filename)
+        self._log.info("Closing file '%s'", self.filename)
         self.AG.layout(prog="dot")
         self.AG.draw(self.name+".png")
