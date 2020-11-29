@@ -14,6 +14,14 @@ SUPPORTED_FILE_TYPES = {
 __logger = logging.getLogger("CallFollower.CodeParser")
 
 # Note: the first added parser is the default one.
+__logger.debug("Importing CParser")
+try:
+    from .cparser import CParser
+except Exception as e:
+    __logger.warning("Failed to import CParser: {}".format(e))
+else:
+    ParserType.addType("CParser", CParser)
+
 __logger.debug("Importing Cscope")
 try:
     from .cscope import Cscope
