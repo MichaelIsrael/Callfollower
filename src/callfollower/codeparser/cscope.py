@@ -7,16 +7,6 @@ import logging
 import re
 
 
-CSCOPE_ENTRY_REGEX = r"(?P<File>.+\.({}))\s+" + \
-                     r"(?P<Function>(\S+))\s+" + \
-                     r"(?P<Line>\d+)\s+" + \
-                     r"(?P<Code>.*)"
-
-
-def BuildRegex():
-    return CSCOPE_ENTRY_REGEX.format("|".join(SUPPORTED_FILE_TYPES["C"]))
-
-
 class CscopeResultFormatError(CodeParserException):
     def __init__(self, text, regex):
         self.text = text
@@ -49,10 +39,18 @@ class CscopeNotInstalledError(CodeParserException):
 
 
 class CscopeResult:
+    CSCOPE_ENTRY_REGEX = r"(?P<File>.+\.({}))\s+" + \
+                         r"(?P<Function>(\S+))\s+" + \
+                         r"(?P<Line>\d+)\s+" + \
+                         r"(?P<Code>.*)"
+
     def __init__(self, entry):
         self.log = logging.getLogger("CallFollower.CscopeResult")
         self.log.debug("Parsing entry '%s'.", entry)
-        regex = BuildRegex()
+
+        regex = self.CSCOPE_ENTRY_REGEX.format("|".join(
+                SUPPORTED_FILE_TYPES["C"]))
+
         match = re.match(regex, entry)
         if match:
             self.log.debug("Parsing returned '%s'.", str(match.groupdict()))
@@ -73,20 +71,13 @@ class CscopeResult:
         return self.info["Code"]
 
 
-class CscopeCodeDefinition(CodeDefinition):
-    def __init__(self, entry):
-        result = CscopeResult(entry)
-        super(CscopeCodeDefinition, self).__init__(result.getFunction(),
-                                                   result.getFile(),
-                                                   result.getLine())
-
-
 class Cscope(AbstractCodeParser):
     def __init__(self, root_dir=r"."):
         # Calling constructor of AbstractCodeParser
         super(Cscope, self).__init__(root_dir)
         # A list to store cscope arguments.
         self._args = []
+        # self._args.append("-d")
 
     def initialize(self):
         try:
@@ -138,35 +129,33 @@ class Cscope(AbstractCodeParser):
 
     def getCaller(self, function):
         output = self._query(3, function)
-        callers = [(definition, CscopeResult(line).getLine())
-                   for line in output
-                   for definition in
-                   self.getDefinition(CscopeResult(line).getFunction())]
-        self.log.info("Found %d caller(s) of %s: %s.",
-                      len(callers),
-                      function,
-                      str([(c[0].getName(), c[1]) for c in callers]))
+        callers = [(definition, result.getLine())
+                   for result in map(CscopeResult, output)
+                   for definition in self.getDefinition(result.getFunction())]
+        self.log.info("Found %d caller(s) of %s: %s.", len(callers),
+                      function, str([(c[0].function, c[1]) for c in callers]))
         return callers
 
     def getCalled(self, function):
         output = self._query(2, function)
-        called = [(definition, CscopeResult(line).getLine())
-                  for line in output
-                  for definition in
-                  self.getDefinition(CscopeResult(line).getFunction())]
-        self.log.info("Found %d function(s) called by %s: %s.",
-                      len(called),
-                      function,
-                      str([(c[0].getName(), c[1]) for c in called]))
+        called = [(definition, result.getLine())
+                  for result in map(CscopeResult, output)
+                  for definition in self.getDefinition(result.getFunction())]
+        self.log.info("Found %d function(s) called by %s: %s.", len(called),
+                      function, str([(c[0].function, c[1]) for c in called]))
         return called
 
     def getDefinition(self, function):
         output = self._query(1, function)
-        definitions = [CscopeCodeDefinition(line) for line in output]
+        definitions = [CodeDefinition(result.getFunction(),
+                                      result.getFile(),
+                                      result.getLine(),
+                                      )
+                       for result in map(CscopeResult, output)]
         self.log.info("Found %d definition(s) for %s: %s.",
                       len(definitions),
                       function,
-                      str([d.getLocation() for d in definitions]))
+                      str([(d.filename, d.line) for d in definitions]))
         return definitions
 
     def clean(self):

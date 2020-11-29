@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
+import dataclasses
 import logging
-import sys
-
-positivier = 2 * (sys.maxsize + 1)
 
 
 class CodeParserException(Exception):
@@ -35,7 +33,7 @@ class AbstractCodeParser(ABC):
                                             self.getRootDir().name))
 
     def getRootDir(self):
-        return self._rootPath.resolve()
+        return self._rootPath
 
     @abstractmethod
     def initialize(self):
@@ -69,28 +67,12 @@ class AbstractCodeParser(ABC):
         raise NotImplementedError
 
 
-class CodeDefinition:
-    def __init__(self, Function, File, Line):
-        self.log = logging.getLogger("CallFollower.CodeDefinition.%s" %
-                                     Function)
-        self._name = Function
-        self._file = Path(File)
-        self._line = Line
-        self._unique = hash(self) % positivier
-        self.log.debug("Definition at %s:%d (Unique Id = %d).",
-                       self._file, self._line, self._unique)
+@dataclasses.dataclass
+class CodeDefinition(object):
+    function: str
+    filename: Path = None
+    line: int = 0
+    classname = None
 
-    def getName(self):
-        return self._name
-
-    def getLocation(self):
-        return (self._file, self._line)
-
-    def getFullName(self):
-        return '{}-{}:\n{}'.format(self._file.name, self._line, self._name)
-
-    def __hash__(self):
-        return hash((self._file, self._line))
-
-    def getUniqueId(self):
-        return self._unique
+    def __iter__(self):
+        return iter(dataclasses.asdict(self).items())

@@ -25,17 +25,12 @@ class ParserMetaType(type):
     __parser_dict__ = {}
     # Using a lit of one element to avoid a recursion in __setattr__ when
     # overwriting a member.
-    __default_parser__ = []
+    __default_parser__ = None
 
     def __getattr__(cls, attr):
+        # if the default parser is requested, return __default_parser__.
         if attr.title() == "Default":
-            # if the default parser is requested, return the first and only
-            #  element in __default_parser__.
-            try:
-                return cls.__default_parser__[0]
-            except IndexError:
-                # No parsers were added.
-                raise AttributeError("No parsers were found.") from None
+            return cls.__default_parser__
 
         # Otherwise, try to return the requested parser.
         try:
@@ -49,7 +44,7 @@ class ParserMetaType(type):
     def __setattr__(cls, name, value):
         if not cls.__default_parser__:
             # Set the first added parser as the default one.
-            cls.__default_parser__.append(value)
+            super().__setattr__("__default_parser__", value)
         # Add the new parser to the dict.
         cls.__parser_dict__[name] = value
 
