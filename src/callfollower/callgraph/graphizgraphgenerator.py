@@ -8,11 +8,13 @@ import sys
 class GraphvizGraphGenerator(AbstractGraphGenerator):
     _hash_positivier = 2 * (sys.maxsize + 1)
 
-    def __init__(self, name, filename=None, filetype=None):
+    def __init__(self, name, filename=None, filetype=None, group_fcn=None):
         self._log = logging.getLogger("CallFollower.CallGraphGenerator.%s" %
                                       name)
 
-        self.name = name
+        self._name = name
+        self._group_fcn = group_fcn
+        self._groups = {}
 
         if filename:
             self.filename = Path(filename)
@@ -25,22 +27,20 @@ class GraphvizGraphGenerator(AbstractGraphGenerator):
             except TypeError:
                 self.filename = Path(name + r".png")
 
-        self.count = 0
-
         self._log.debug("Creating CallGraphGenerator for file '%s'",
                         self.filename)
 
     def open(self):
         self._log.info("Creating file '%s'", self.filename)
-        self.AG = pygraphviz.AGraph(name=self.name,
-                                    strict=False,
-                                    directed=True)
-        self.AG.graph_attr.update(ranksep='0.3')
-        self.AG.node_attr.update(shape="circle",
-                                 fontsize=12,
-                                 fontname="Courier",
-                                 height=.1)
-        self.AG.edge_attr.update(arrowsize=1)
+        self._agraph = pygraphviz.AGraph(name=self._name,
+                                         strict=False,
+                                         directed=True)
+        self._agraph.graph_attr.update(ranksep='0.3')
+        self._agraph.node_attr.update(shape="circle",
+                                      fontsize=12,
+                                      fontname="Courier",
+                                      height=.1)
+        self._agraph.edge_attr.update(arrowsize=1)
 
     def add_group(self, name):
         raise NotImplementedError()
@@ -64,32 +64,48 @@ class GraphvizGraphGenerator(AbstractGraphGenerator):
             params['fillcolor'] = "mediumseagreen"
         """
 
-        self._log.debug("Defining node '%s'. parameters: %s.",
+        self._log.debug("Creating node '%s'. parameters: %s.",
                         node.name, str(params))
+        self._agraph.add_node("Node" + str(self._get_unique_id(node)),
+                              **params)
 
-        self.AG.add_node("Node" + str(self._get_unique_id(node)), **params)
+        if self._group_fcn:
+            group = self._group_fcn(node)
+            try:
+                subgraph = self._groups[group]
+            except KeyError:
+                subgraph = self._agraph.add_subgraph(name="Cluster_" + group,
+                                                     label=group,
+                                                     style="rounded",
+                                                     )
+                self._groups[group] = subgraph
+            finally:
+                self._log.debug("Node added to group '%s'", group)
+                subgraph.add_node("Node" + str(self._get_unique_id(node)))
 
     def add_edge(self, edge, formatter=None):
-        """
-        self._log.debug("Adding link '%s' (%d) to '%s' (%d).",
-                        n1.name, self._get_unique_id(n1),
-                        n2.name, self._get_unique_id(n2))
-        """
+        self._log.debug("Creating edge: '%s' (%d) -> '%s' (%d).",
+                        edge.source.name,
+                        self._get_unique_id(edge.source),
+                        edge.destination.name,
+                        self._get_unique_id(edge.destination)
+                        )
         text = None
         if formatter:
             try:
                 text = formatter(edge)
             except TypeError:
                 text = formatter
-        self.AG.add_edge("Node" + str(self._get_unique_id(edge.source)),
-                         "Node" + str(self._get_unique_id(edge.destination)),
-                         label=text,
-                         )
+        self._agraph.add_edge(
+            "Node" + str(self._get_unique_id(edge.source)),
+            "Node" + str(self._get_unique_id(edge.destination)),
+            label=text,
+            )
 
     def _get_unique_id(self, obj):
         return hash(obj) % self._hash_positivier
 
     def close(self):
         self._log.info("Closing file '%s'", self.filename)
-        self.AG.layout(prog="dot")
-        self.AG.draw(self.name+".png")
+        self._agraph.layout(prog="dot")
+        self._agraph.draw(self._name+".png")
