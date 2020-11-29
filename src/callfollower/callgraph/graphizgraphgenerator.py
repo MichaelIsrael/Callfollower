@@ -5,7 +5,7 @@ import logging
 import sys
 
 
-class GraphvizGraphGenerator(AbstractGraphGenerator):
+class PygraphvizGenerator(AbstractGraphGenerator):
     _hash_positivier = 2 * (sys.maxsize + 1)
 
     def __init__(self, name, filename=None, filetype=None, group_fcn=None):
@@ -17,21 +17,22 @@ class GraphvizGraphGenerator(AbstractGraphGenerator):
         self._groups = {}
 
         if filename:
-            self.filename = Path(filename)
-            if filetype:
-                if self.filename.suffix != r"." + filetype:
-                    self._log.warning("HHHHEEEYYY")
+            self._filename = Path(filename)
+            if filetype and \
+               self._filename.suffix.lower() != r"." + filetype.lower():
+                self._log.warning("FileType does not match the file extension\
+                 (%s - %s).", filetype, filename)
         else:
             try:
-                self.filename = Path(name + r"." + filetype)
+                self._filename = Path(name + r"." + filetype)
             except TypeError:
-                self.filename = Path(name + r".png")
+                self._filename = Path(name + r".png")
 
         self._log.debug("Creating CallGraphGenerator for file '%s'",
-                        self.filename)
+                        self._filename)
 
     def open(self):
-        self._log.info("Creating file '%s'", self.filename)
+        self._log.info("Creating file '%s'", self._filename)
         self._agraph = pygraphviz.AGraph(name=self._name,
                                          strict=False,
                                          directed=True)
@@ -106,6 +107,6 @@ class GraphvizGraphGenerator(AbstractGraphGenerator):
         return hash(obj) % self._hash_positivier
 
     def close(self):
-        self._log.info("Closing file '%s'", self.filename)
+        self._log.info("Closing file '%s'", self._filename)
         self._agraph.layout(prog="dot")
         self._agraph.draw(self._name+".png")

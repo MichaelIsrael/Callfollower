@@ -7,10 +7,10 @@ __author__ = "Michael Israel"
 
 
 from .callgraph import CallGraph, CallGraphNode, CallGraphEdge
-from .graphizgraphgenerator import GraphvizGraphGenerator
+from .graphizgraphgenerator import PygraphvizGenerator
 from enum import Enum
 
 
 class GraphType(Enum):
-    Graphviz = GraphvizGraphGenerator
-    Default = Graphviz
+    Pygraphviz = PygraphvizGenerator
+    Default = Pygraphviz
