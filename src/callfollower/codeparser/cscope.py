@@ -108,7 +108,7 @@ class Cscope(AbstractCodeParser):
         # Add every found file to cscope.files.
         for f in lst:
             self.log.debug("Found '%s'.", f)
-            File.write(str(f.resolve())+"\n")
+            File.write(str(f)+"\n")
 
     def _query(self, num, string):
         query = "-qL{num}{string}".format(num=num, string=string)
