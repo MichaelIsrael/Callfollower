@@ -1,7 +1,6 @@
 from .abstractgraphgenerator import GraphGeneratorContextManager, \
-                                    AbstractFormattable, GraphTemplateFormatter
+                                    AbstractFormattable
 from abc import ABC, abstractmethod
-from string import Template
 import logging
 
 
@@ -137,21 +136,20 @@ class CallGraph(object):
         # Add edge.
         self._edges_list.insert(edge)
 
-    def draw(self, graph_type):
+    def draw(self, graph_type, style=None):
         self._log.info("Drawing graph.")
-        with GraphGeneratorContextManager(graph_type, self._name) as graph:
-            node_fmt = GraphTemplateFormatter(
-                    Template("$filename-$line:\n$function"))
-            edge_fmt = GraphTemplateFormatter(
-                    Template("$lines"))
+        with GraphGeneratorContextManager(graph_type=graph_type,
+                                          name=self._name,
+                                          group_fcn=style.get_group_from_node,
+                                          ) as graph:
             self._log.info("Drawing nodes.")
             for node in self._nodes_list:
                 self._log.debug("Node: " + node.name)
-                graph.add_node(node, node_fmt)
+                graph.add_node(node, style.node_formatter)
 
             self._log.info("Drawing edges.")
             for edge in self._edges_list:
                 self._log.debug("Edge: %s -> %s.",
                                 edge.source.name,
                                 edge.destination.name)
-                graph.add_edge(edge, edge_fmt)
+                graph.add_edge(edge, style.edge_formatter)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # PYTHON_ARGCOMPLETE_OK
 from callfollower import CallFollower
-from callfollower.callgraph import GraphType
+from callfollower.callgraph import GraphType, GraphStyle
 from callfollower import __version__ as VERSION
 from operator import attrgetter
 import argparse
@@ -109,15 +109,7 @@ class CallFollowerCli:
         CmdFollow = subparsers.add_parser("follow",
                                           help="create a calling chain.")
 
-        # -l, --limit
-        CmdFollow.add_argument("-l",
-                               "--limit",
-                               help="maximum number of call layers (for each \
-                                     direction when all is used.",
-                               action="store",
-                               type=int,
-                               metavar="N",
-                               default=0)
+        self._setup_cmd_options(CmdFollow)
 
         # Create subparsers for follow.
         subfollow = CmdFollow.add_subparsers(metavar="Direction",
@@ -138,25 +130,7 @@ class CallFollowerCli:
                            metavar="FUNCTION",
                            action="store")
 
-        # -l, --limit
-        CmdUp.add_argument("-l",
-                           "--limit",
-                           help="maximum number of calling layers.",
-                           action="store",
-                           type=int,
-                           metavar="N",
-                           default=0)
-
-        # -g, --graph
-        CmdUp.add_argument("-g",
-                           "--graph",
-                           help="the graph genertor.",
-                           action="store",
-                           type=self._graph_type_from_string,
-                           choices=GraphType,
-                           metavar=str(list(map(attrgetter("name"),
-                                                GraphType))),
-                           default=GraphType.Default)
+        self._setup_cmd_options(CmdUp)
 
         #######################################################################
         # follow down                                                         #
@@ -173,25 +147,7 @@ class CallFollowerCli:
                              metavar="FUNCTION",
                              action="store")
 
-        # -l, --limit
-        CmdDown.add_argument("-l",
-                             "--limit",
-                             help="maximum number of called layers.",
-                             action="store",
-                             type=int,
-                             metavar="N",
-                             default=0)
-
-        # -g, --graph
-        CmdDown.add_argument("-g",
-                             "--graph",
-                             help="the graph genertor.",
-                             action="store",
-                             type=self._graph_type_from_string,
-                             choices=GraphType,
-                             metavar=str(list(map(attrgetter("name"),
-                                                  GraphType))),
-                             default=GraphType.Default)
+        self._setup_cmd_options(CmdDown)
 
         #######################################################################
         # follow all                                                          #
@@ -208,26 +164,7 @@ class CallFollowerCli:
                             metavar="FUNCTION",
                             action="store")
 
-        # -l, --limit
-        CmdAll.add_argument("-l",
-                            "--limit",
-                            help="maximum number of call layers in each \
-                                  direction.",
-                            action="store",
-                            type=int,
-                            metavar="N",
-                            default=0)
-
-        # -g, --graph
-        CmdAll.add_argument("-g",
-                            "--graph",
-                            help="the graph genertor.",
-                            action="store",
-                            type=self._graph_type_from_string,
-                            choices=GraphType,
-                            metavar=str(list(map(attrgetter("name"),
-                                                 GraphType))),
-                            default=GraphType.Default)
+        self._setup_cmd_options(CmdAll)
 
         #######################################################################
         # End of argpare configuration                                        #
@@ -290,12 +227,45 @@ class CallFollowerCli:
         # Running subcommand.
         args.subcmd(args)
 
-    def _graph_type_from_string(self, name):
-        try:
-            return GraphType[name]
-        except KeyError:
-            msg = "%r is not a valid graph generator" % name
-            raise argparse.ArgumentTypeError(msg)
+    def _choice_from_string(self, type_):
+        def func(name):
+            try:
+                return type_[name.upper()]
+            except KeyError:
+                msg = "%r is not a valid choice" % name
+                raise argparse.ArgumentTypeError(msg)
+        return func
+
+    def _setup_cmd_options(self, cmd):
+        # -l, --limit
+        cmd.add_argument("-l",
+                         "--limit",
+                         help="maximum number of calling layers.",
+                         action="store",
+                         type=int,
+                         metavar="N",
+                         default=0)
+
+        # -g, --graph
+        cmd.add_argument("-g",
+                         "--graph",
+                         help="the graph genertor.",
+                         action="store",
+                         type=self._choice_from_string(GraphType),
+                         choices=GraphType,
+                         metavar=str(list(map(attrgetter("name"), GraphType))),
+                         default=GraphType.DEFAULT)
+
+        # -s, --style
+        cmd.add_argument("-s",
+                         "--style",
+                         help="the graph genertor.",
+                         action="store",
+                         type=self._choice_from_string(GraphStyle),
+                         choices=GraphStyle,
+                         metavar=str(list(map(attrgetter("name"),
+                                              GraphStyle))),
+                         default=GraphStyle.BASIC)
 
     def help(self, args):
         """Run the 'help' subcommand."""
@@ -310,17 +280,17 @@ class CallFollowerCli:
     def followUp(self, args):
         """Run the 'follow up' subcommand."""
         graph = self.follower.getCaller(args.func, args.limit)
-        graph.draw(args.graph.value)
+        graph.draw(args.graph.value, args.style.value)
 
     def followDown(self, args):
         """Run the 'follow down' subcommand."""
         graph = self.follower.getCalled(args.func, args.limit)
-        graph.draw(args.graph.value)
+        graph.draw(args.graph.value, args.style.value)
 
     def followAll(self, args):
         """Run the 'follow all' subcommand."""
         graph = self.follower.getFullTree(args.func, args.limit)
-        graph.draw(args.graph.value)
+        graph.draw(args.graph.value, args.style.value)
 
 
 if __name__ == "__main__":

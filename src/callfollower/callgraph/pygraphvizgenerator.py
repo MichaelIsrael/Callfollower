@@ -43,9 +43,6 @@ class PygraphvizGenerator(AbstractGraphGenerator):
                                       height=.1)
         self._agraph.edge_attr.update(arrowsize=1)
 
-    def add_group(self, name):
-        raise NotImplementedError()
-
     def add_node(self, node, formatter=None):
         params = {}
         if formatter:
@@ -72,15 +69,13 @@ class PygraphvizGenerator(AbstractGraphGenerator):
 
         if self._group_fcn:
             group = self._group_fcn(node)
-            try:
-                subgraph = self._groups[group]
-            except KeyError:
-                subgraph = self._agraph.add_subgraph(name="Cluster_" + group,
-                                                     label=group,
-                                                     style="rounded",
-                                                     )
-                self._groups[group] = subgraph
-            finally:
+            if group:
+                subgraph = self._agraph.get_subgraph(name="cluster_" + group)
+                if not subgraph:
+                    subgraph = self._agraph.add_subgraph(name="cluster_"+group,
+                                                         label=group,
+                                                         style="rounded",
+                                                         )
                 self._log.debug("Node added to group '%s'", group)
                 subgraph.add_node("Node" + str(self._get_unique_id(node)))
 
